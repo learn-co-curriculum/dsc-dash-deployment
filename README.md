@@ -975,7 +975,157 @@ response = requests.post(
 response.json()
 ```
 
+## Deploying to Heroku
+
+Deploying our Dash app to Heroku is very similar to deploying our Flask app to Heroku. We'll need to:
+
+1. Install a **production server** and make sure we can successfully run our app locally via the command line
+2. Create our **requirements files** and push them to GitHub
+3. Create a new app through the **Heroku web interface** and connect it to our GitHub repo
+
+Let's get started!
+
+### Installing and Running a Production Server
+
+#### Installing Waitress
+
+Once again, we'll use a production-quality server called [Waitress](https://docs.pylonsproject.org/projects/waitress/en/latest/).
+
+In the terminal, make sure you have `dash-env` activated, then run:
+
+```bash
+pip install waitress==2.1.1
+```
+
+#### Organizing the Code into a `.py` File
+
+Waitress needs the code to be located in a `.py` file rather than directly within a Jupyter Notebook. We have already copied the above code into a file called `app.py`.
+
+Note that there is one small difference between the code above and the code in `app.py`: instead of importing `Dash` from the `jupyter_dash` library, we imported it directly from the `dash` library. In other words, instead of
 
 ```python
+from jupyter_dash import JupyterDash as Dash
+```
+
+`app.py` has
+
+```python
+from dash import Dash
+```
+
+This is because when we're deploying the application, we don't want the version of Dash designed to run in a notebook, we want the standalone version. But otherwise the code is identical to the "final version" code shown in this notebook.
+
+#### Running the Production Server
+
+Run this command in the terminal:
+
+```bash
+waitress-serve --port=5000 app:flask_app
+```
+
+Note that this is very similar to our command when we were deploying our Flask app, which was `waitress-serve --port=5000 app:app`. The difference is that the Flask app inside of `app.py` had a variable name of `app`, whereas now it has the name `flask_app`.
+
+You should see an output like this:
 
 ```
+INFO:waitress:Serving on http://0.0.0.0:5000
+```
+
+and you should be able to open up that link in your browser!
+
+Once you have confirmed that this works, go ahead and shut down the server using control-C.
+
+### Requirements Files
+
+Again, this is very similar to when we deployed the Flask app. We just have a longer list of requirements, and our `Procfile` specifies that the app variable name is `flask_app` rather than app. These files have already been included in this repository.
+
+#### `runtime.txt`
+
+This is the same as when we deployed our Flask app. Remember that if you get an error related to the runtime, that means that the [supported runtimes list](https://devcenter.heroku.com/articles/python-support#supported-runtimes) has changed. Check that link to find the most up-to-date Python 3.8 runtime and edit `runtime.txt` accordingly.
+
+```
+python-3.8.13
+```
+
+#### `requirements.txt`
+
+Our previous `requirements.txt` looked like this:
+
+```
+Flask==2.0.3
+joblib==0.17.0
+scikit-learn==0.23.2
+waitress==2.1.1
+```
+
+Our new `requirements.txt` has those same items, with additional ones added:
+
+```
+Flask==2.0.3
+dash==2.3
+dash-bootstrap-components==1.0
+pandas==1.4
+joblib==0.17.0
+scikit-learn==0.23.2
+waitress==2.1.1
+```
+
+To explain further:
+
+* `dash` and `dash-bootstrap-components` have been added so that we can create layouts and callbacks with Dash
+* `pandas` has been added so that we can manipulate the dataset in preparation for displaying it in a table. If you just want your app to make predictions on unseen data, you won't need `pandas`.
+
+This is also slightly different from the `dash-env` requirements we installed earlier, because the deployed version of our app does not need `notebook` or `jupyter-dash` (or be tethered to a specific version of `Werkzeug`, which was needed at the time of this writing to make `jupyter-dash` work correctly).
+
+#### `Procfile`
+
+Our `Procfile` is also slightly different because our app variable name is different.
+
+Our previous `Procfile` looked like this:
+
+```
+web: waitress-serve --port=$PORT app:app
+```
+
+And our new one looks like this:
+
+```
+web: waitress-serve --port=$PORT app:flask_app
+```
+
+### Deploying the App on Heroku
+
+This is the same set of steps as before, but we'll include them here for convenience:
+
+1. Make sure you are **logged in** to Heroku. You can go to [https://dashboard.heroku.com/](https://dashboard.heroku.com/) and it will either show you your list of apps or redirect you to the login page.
+   * You should already have an account if you followed the steps from the Flask deployment lesson, but you can also create an account now.
+2. Go to [https://dashboard.heroku.com/new-app](https://dashboard.heroku.com/new-app) to make a new app on Heroku.
+3. Either fill in a name for your app then click **Create app**, or just click **Create app** if you want a name to be generated for you.
+4. Scroll down to **Deployment method** and choose **GitHub**.
+   * You should already be signed in with GitHub if you followed the steps from the Flask deployment lesson, but you can also approve the connection in the pop-up window now if you haven't previously.
+5. **Search** for the repository you want, then click **Connect** on the repository in the list of search results.
+6. Scroll down to **Manual deploy**, choose the appropriate branch, and click **Deploy Branch**.
+7. Wait for the app to build, then once you see the message "Your app was successfully deployed" click the **View** button to open up your Dash app!
+
+The interface should be much more interesting than the "Hello, world!" from your Flask app. You should also be able to make API requests (replace `base_url` with your actual Heroku app URL).
+
+
+```python
+# base URL (ending with .herokuapp.com, no trailing /)
+base_url = ""
+response = requests.post(
+    url=f"{base_url}/predict",
+    json={"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2}
+)
+response.json()
+```
+
+## Level Up
+
+Dash is created by Plotly, which also makes a well-known [Python graphing library](https://plotly.com/python/) that creates interactive graphs using Python. Check out the examples [here](https://dash.plotly.com/dash-core-components/graph) and try adding a visualization to your dashboard!
+
+In addition to being used as layout elements, Plotly graphs can be attached to callbacks in a Dash page. So, for example, the graph axis scale could change using a slider input, or a user could click on a point on a graph and send that to their model to make a prediction. Try it out for yourself!
+
+## Summary
+
+You have now learned how to combine Flask with Dash to build and deploy powerful dynamic web applications using machine learning. We can't wait to see what you'll make next!
